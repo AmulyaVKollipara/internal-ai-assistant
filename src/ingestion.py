@@ -7,12 +7,15 @@ from langchain_community.vectorstores import Chroma
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 
+curr_directory = os.path.dirname(__file__)
+env_file = os.path.join(os.path.dirname(curr_directory), ".env")
+
 # Load environment variables
-load_dotenv("C:\\Users\\Administrator\\Documents\\Capstone\\.env")
+load_dotenv(env_file)
 
 # Define the directory containing the text file and the persistent directory
-file_path = "C:\\Users\\Administrator\\Documents\\Capstone\\src\\data"
-persistent_directory = "C:\\Users\\Administrator\\Documents\\Capstone\\src\\vectorstore"
+file_path = os.path.join(curr_directory, "data")
+persistent_directory = os.path.join(curr_directory, "vectorstore")
 
 # Initialize Azure embeddings
 embeddings = AzureOpenAIEmbeddings(
