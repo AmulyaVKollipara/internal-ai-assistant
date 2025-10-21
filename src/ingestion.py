@@ -5,12 +5,12 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_openai import AzureOpenAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
 
 # Load environment variables
 load_dotenv("C:\\Users\\Administrator\\Documents\\Capstone\\.env")
 
 # Define the directory containing the text file and the persistent directory
-# current_dir = os.path.dirname(os.path.abspath(__file__))
 file_path = "C:\\Users\\Administrator\\Documents\\Capstone\\src\\data"
 persistent_directory = "C:\\Users\\Administrator\\Documents\\Capstone\\src\\vectorstore"
 
@@ -31,16 +31,15 @@ if not os.path.exists(persistent_directory):
         raise FileNotFoundError(
             f"The file {file_path} does not exist. Please check the path."
         )
-# else:
-#     print("All directories found. Proceeding..")
 
     # Read the text content from the file
     # for file in file_path:
+    documents = []
     loader = TextLoader("C:\\Users\\Administrator\\Documents\\Capstone\\src\\data\\hr_policy.txt")
-    documents = loader.load()
+    documents.append(loader.load())
 
     loader = TextLoader("C:\\Users\\Administrator\\Documents\\Capstone\\src\\data\\it_policy.txt")
-    documents = loader.load()
+    documents.append(loader.load())
 
 
 
@@ -48,18 +47,28 @@ if not os.path.exists(persistent_directory):
 
     # Split the document into chunks
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-    split_docs = text_splitter.split_documents(documents)
+    hr_split_docs = text_splitter.split_documents(documents[0])
+    it_split_docs = text_splitter.split_documents(documents[1])
 
-    print(f"🔹 Split into {len(split_docs)} chunks. Initializing embeddings...")
+
+    print(f"🔹 Split into {len(hr_split_docs)} and {len(it_split_docs)} chunks. Initializing embeddings...")
 
     # Display information about the split documents
     # print("\n--- Document Chunks Information ---")
     # print(f"Number of document chunks: {len(split_docs)}")
     # print(f"Sample chunk:\n{split_docs[0].page_content}\n")
 
+    for doc in hr_split_docs:
+        doc.metadata["domain"] = "HR"
+
+    for doc in it_split_docs:
+        doc.metadata["domain"] = "IT"
+
+    all_docs = hr_split_docs + it_split_docs
+
     # Create the vector store and persist it automatically
     print("\n--- Creating vector store ---")
-    db = Chroma.from_documents(split_docs, embeddings, persist_directory=persistent_directory)
+    db = Chroma.from_documents(all_docs, embeddings, persist_directory=persistent_directory)
     print("\n--- Finished creating vector store ---")
 
 else:
