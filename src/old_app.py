@@ -47,27 +47,29 @@ llm = AzureChatOpenAI(
     temperature=1
 )
 
-# Prompt Template creation
-system_prompt = (
+# my own code
+contextualize_q_system_prompt = (
     "Given a chat history and the latest user question "
     "answer only questions relevant to the information "
     "in the database related to HR and IT policies. "
-    "Catgorize the question based on IT or HR."
+    "Catgorize the question based on IT or HR "
+    "anything else, please answer by "
+    "saying `Sorry, I am unable to answer this as it is beyond my scope.`"
 )
 
-system_prompt = ChatPromptTemplate.from_messages(
+contextualize_q_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", system_prompt),
+        ("system", contextualize_q_system_prompt),
         MessagesPlaceholder("chat_history"),
         ("human", "{input}"),
     ]
 )
 
 history_aware_retriever = create_history_aware_retriever(
-    llm, retriever, system_prompt
+    llm, retriever, contextualize_q_prompt
 )
 
-final_system_prompt = (
+qa_system_prompt = (
     "You are an assistant for answering IT and HR-related questions."
     "Use ONLY the retrieved context below to answer. "
     "Mention whether you are retrieving the data from IT or HR in the beginning "
@@ -79,46 +81,33 @@ final_system_prompt = (
     "{context}"
 )
 
-chat_template = ChatPromptTemplate.from_messages(
+qa_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", final_system_prompt),
+        ("system", qa_system_prompt),
         MessagesPlaceholder("chat_history"),
         ("human", "{input}")
     ]
 )
 
-question_answer_chain = create_stuff_documents_chain(llm, chat_template)
+question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
 
 rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
  
 # Initialize chat history in Streamlit session state
-st.title("Enterprise AI Assistant")
-st.markdown("Please type your query below. To end the session, type 'exit'")
-# Initialize chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-    sessionRunning = True
 
-# Display chat messages
-for i in range(0, len(st.session_state.chat_history), 2):
-    user_msg = st.session_state.chat_history[i].content
-    ai_msg = st.session_state.chat_history[i + 1].content if i + 1 < len(st.session_state.chat_history) else ""
-    with st.chat_message("user"):
-        st.markdown(user_msg)
-    with st.chat_message("assistant"):
-        st.markdown(ai_msg)
+st.title("🧠 Enterprise Knowledge Assistant")
+st.write("Ask questions about HR or IT policies. Type 'exit' to end the session.")
 
-# Chat input
-query = st.chat_input("Type your question here...")
+# Input box for user query
+query = st.text_input("You:", key="user_input")
 
 if query:
-    if query.strip().lower() == "exit":
-        st.markdown("You've exited the session. Thanks for chatting with me!")
+    if query.lower() == "exit":
+        st.write("👋 Session ended.")
         st.stop()
-    # Display user message
-    with st.chat_message("user"):
-        st.markdown(query)
 
     # Invoke RAG chain
     result = rag_chain.invoke({
@@ -126,13 +115,51 @@ if query:
         "chat_history": st.session_state.chat_history
     })
 
-    # Display assistant response
-    with st.chat_message("assistant"):
-        st.markdown(result['answer'])
+    # Display response
+    st.markdown(f"**AI:** {result['answer']}")
 
     # Update chat history
     st.session_state.chat_history.append(HumanMessage(content=query))
     st.session_state.chat_history.append(SystemMessage(content=result['answer']))
 
+# def continual_chat():
+#     print("Start chatting with the AI!" )
+#     chat_history = []
+    # st.text_input("What question you have in mind?")
 
 
+
+# if __name__ == "__main__":
+#     continual_chat()
+#     # streamlit framework
+#     st.title("Langchain Demo With LLM Model")
+#     input_text=st.text_input("What question you have in mind?")
+#     while True:
+#         query = input("You: ")
+#         if (query.lower() == "exit"):
+#             break
+#         result = rag_chain.invoke({"input": query, "chat_history": chat_history})
+#         print(f"AI: {result['answer']}")
+#         chat_history.append(HumanMessage(content=query))
+#         chat_history.append(SystemMessage(content=result['answer']))
+ 
+ 
+## Ollama Llama2 model
+#     llm=Ollama(model="gemma:2b")
+#     output_parser=StrOutputParser()
+#     chain=prompt|llm|output_parser
+ 
+# if input_text:
+#     st.write(chain.invoke({"question":input_text}))
+
+
+
+# # Streamlit UI
+# st.title("🧠 Enterprise Knowledge Assistant")
+# st.write("Ask questions about HR policies, IT knowledge, or support documentation.")
+
+# query = st.text_input("🔍 Enter your query:")
+
+# if query:
+#     response = qa_chain.run(query)
+#     st.write("**AI Response:**", response)
