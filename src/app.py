@@ -95,29 +95,37 @@ rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chai
 
  
 # Initialize chat history in Streamlit session state
+
+st.title("🧠 Enterprise Knowledge Assistant")
+
+# Initialize chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-st.title("🧠 Enterprise Knowledge Assistant")
-st.write("Ask questions about HR or IT policies. Type 'exit' to end the session.")
+# Display existing messages
+for i in range(0, len(st.session_state.chat_history), 2):
+    user_msg = st.session_state.chat_history[i].content
+    ai_msg = st.session_state.chat_history[i + 1].content if i + 1 < len(st.session_state.chat_history) else ""
+    with st.chat_message("user"):
+        st.markdown(user_msg)
+    with st.chat_message("assistant"):
+        st.markdown(ai_msg)
 
-# Input box for user query
-query = st.text_input("You:", key="user_input")
+# Chat input
+user_input = st.chat_input("Please enter your query...")
 
-if query:
-    if query.lower() == "exit":
-        st.write("👋 Session ended.")
-        st.stop()
+if user_input:
+    with st.chat_message("user"):
+        st.markdown(user_input)
 
-    # Invoke RAG chain
     result = rag_chain.invoke({
-        "input": query,
+        "input": user_input,
         "chat_history": st.session_state.chat_history
     })
 
-    # Display response
-    st.markdown(f"**AI:** {result['answer']}")
+    with st.chat_message("assistant"):
+        st.markdown(result['answer'])
 
     # Update chat history
-    st.session_state.chat_history.append(HumanMessage(content=query))
+    st.session_state.chat_history.append(HumanMessage(content=user_input))
     st.session_state.chat_history.append(SystemMessage(content=result['answer']))
