@@ -75,12 +75,16 @@ history_aware_retriever = create_history_aware_retriever(
 
 final_system_prompt = (
     "You are an assistant for answering IT and HR-related questions.\n"
-    "Use ONLY the retrieved context below to answer.\n"
-    "Mention whether you are retrieving the data from IT or HR in the beginning.\n"
-    "For each answer, include the source filename and page number from the metadata.\n"
-    "Do not answer more than 3 lines.\n"
-    "If the context does not contain relevant information, respond with:\n"
+    "If the query does not contain relevant information, respond with:\n"
     "`Sorry, I am unable to answer this as it is beyond my scope.`\n\n"
+    "and nothing else. Only mention source and other details if you are fetching relevant details."
+    "If source is from HR then begin with `Database: HR`, if IT `Database:`"
+    "Use ONLY the retrieved context below to answer.\n"
+    # "Mention whether you are retrieving the data from IT or HR in the beginning.\n"
+    "If mentioning policy, it has to be exact. When summarizing you can elaborate"
+    "For each answer, include the source filename, title, point number (if present) from the metadata.\n"
+    "Do not answer more than 3 lines.\n"
+
     "{context}"
 )
 
@@ -99,12 +103,20 @@ rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chai
  
 # Initialize chat history in Streamlit session state
 
-st.title("🧠 Enterprise Knowledge Assistant")
+st.title("Nova Internal Knowledge Base Assistant")
 st.markdown("Please ask your question below!")
 
-# Initialize chat history
+# Initialize session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+if "session_ended" not in st.session_state:
+    st.session_state.session_ended = False
+
+# Stop interaction if session has ended
+if st.session_state.session_ended:
+    st.markdown("The session has ended. Please refresh the page to start a new one.")
+    st.stop()
 
 # Display existing messages
 for i in range(0, len(st.session_state.chat_history), 2):
@@ -119,6 +131,12 @@ for i in range(0, len(st.session_state.chat_history), 2):
 user_input = st.chat_input("Please enter your query...")
 
 if user_input:
+    if user_input.strip().lower() == "exit":
+        st.session_state.session_ended = True
+        with st.chat_message("assistant"):
+            st.markdown("You've ended the sesssion. Please refresh the page to start a new one.")
+        st.stop()
+
     with st.chat_message("user"):
         st.markdown(user_input)
 
@@ -129,7 +147,6 @@ if user_input:
 
     with st.chat_message("assistant"):
         st.markdown(result['answer'])
-
     # Update chat history
     st.session_state.chat_history.append(HumanMessage(content=user_input))
     st.session_state.chat_history.append(SystemMessage(content=result['answer']))
