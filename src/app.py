@@ -11,21 +11,26 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 
 curr_directory = os.path.dirname(__file__)
 env_file = os.path.join(os.path.dirname(curr_directory), ".env")
+persist_directory = os.path.join(curr_directory, "vectorstore")
+
 
 load_dotenv(env_file)
 
-persist_directory = os.path.join(curr_directory, "vectorstore")
 
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+TEXT_EMBEDDING_DEPLOYMENT = os.getenv("TEXT_EMBEDDING_DEPLOYMENT")
+TEXT_EMBEDDING_VERSION = os.getenv("TEXT_EMBEDDING_VERSION")
+TEXT_EMBEDDING_URL = os.getenv("TEXT_EMBEDDING_URL")
+TEXT_EMBEDDING_KEY = os.getenv("TEXT_EMBEDDING_KEY")
+
 
 embeddings = AzureOpenAIEmbeddings(
-    deployment=AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT,
-    api_key=AZURE_OPENAI_API_KEY,
+    deployment=TEXT_EMBEDDING_DEPLOYMENT,
+    azure_endpoint=TEXT_EMBEDDING_URL,
+    api_key=TEXT_EMBEDDING_KEY,
     openai_api_version=AZURE_OPENAI_API_VERSION
 )
 
@@ -46,12 +51,12 @@ llm = AzureChatOpenAI(
     temperature=1
 )
 
-# 
+
 system_prompt = (
     "Given a chat history and the latest user question "
     "answer only questions relevant to the information "
     "in the database related to HR and IT policies. "
-    "Catgorize the question based on IT or HR."
+    "Categorize the question based on IT or HR."
     "Respond to pleasantries by asking "
     "`How may I help you today?`"
 )
@@ -69,13 +74,12 @@ history_aware_retriever = create_history_aware_retriever(
 )
 
 final_system_prompt = (
-    "You are an assistant for answering IT and HR-related questions."
-    "Use ONLY the retrieved context below to answer. "
-    "Mention whether you are retrieving the data from IT or HR in the beginning "
-    "For answering IT questions, use the document's metadata labelled IT "
-    "and for HR the document's metadata is labelled HR"
-    "Do not answer more than 3 lines."
-    "If the context does not contain relevant information, respond with: "
+    "You are an assistant for answering IT and HR-related questions.\n"
+    "Use ONLY the retrieved context below to answer.\n"
+    "Mention whether you are retrieving the data from IT or HR in the beginning.\n"
+    "For each answer, include the source filename and page number from the metadata.\n"
+    "Do not answer more than 3 lines.\n"
+    "If the context does not contain relevant information, respond with:\n"
     "`Sorry, I am unable to answer this as it is beyond my scope.`\n\n"
     "{context}"
 )
@@ -96,6 +100,7 @@ rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chai
 # Initialize chat history in Streamlit session state
 
 st.title("🧠 Enterprise Knowledge Assistant")
+st.markdown("Please ask your question below!")
 
 # Initialize chat history
 if "chat_history" not in st.session_state:
