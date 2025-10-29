@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 import warnings
-
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Chroma
@@ -50,7 +49,7 @@ embeddings = AzureOpenAIEmbeddings(
 if not os.path.exists(persistent_directory):
     print("Persistent directory does not exist. Initializing vector store...")
 
-    print(f"📄 Loaded {len(documents)} document(s). Splitting text into smaller chunks...")
+    print(f"Loaded {len(documents)} document(s). Splitting text into smaller chunks...")
 
     warnings.filterwarnings("ignore")
     # Split the document into chunks
@@ -58,7 +57,7 @@ if not os.path.exists(persistent_directory):
     hr_chunks = text_splitter.split_documents(hr_docs)
     it_chunks = text_splitter.split_documents(it_docs)
 
-    print(f"🔹 Split into HR: {len(hr_chunks)} chunks and IT: {len(it_chunks)} chunks.")
+    print(f"Split into HR: {len(hr_chunks)} chunks and IT: {len(it_chunks)} chunks.")
 
     # Create the vector store and persist it automatically
     print("\nCreating vector store for HR and IT....")

@@ -10,6 +10,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import LLMChain
 
+
+# retriving required paths  
 curr_directory = os.path.dirname(__file__)
 env_file = os.path.join(os.path.dirname(curr_directory), ".env")
 persist_directory = os.path.join(curr_directory, "vectorstore")
@@ -19,7 +21,7 @@ it_directory = os.path.join(persist_directory, "IT")
 
 load_dotenv(env_file)
 
-
+# loading environment file variables
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
@@ -29,7 +31,7 @@ TEXT_EMBEDDING_VERSION = os.getenv("TEXT_EMBEDDING_VERSION")
 TEXT_EMBEDDING_URL = os.getenv("TEXT_EMBEDDING_URL")
 TEXT_EMBEDDING_KEY = os.getenv("TEXT_EMBEDDING_KEY")
 
-
+# creating embeddings
 embeddings = AzureOpenAIEmbeddings(
     deployment=TEXT_EMBEDDING_DEPLOYMENT,
     azure_endpoint=TEXT_EMBEDDING_URL,
@@ -37,7 +39,7 @@ embeddings = AzureOpenAIEmbeddings(
     openai_api_version=AZURE_OPENAI_API_VERSION
 )
 
-
+# Retrieve vectorstore of Chroma
 hr_vectorstore = Chroma(persist_directory=hr_directory, embedding_function=embeddings)
 it_vectorstore = Chroma(persist_directory=it_directory, embedding_function=embeddings)
 
@@ -45,7 +47,7 @@ hr_retriever = hr_vectorstore.as_retriever()
 it_retriever = it_vectorstore.as_retriever()
 
 
-# Create Retrieval-Augmented Generation (RAG) pipeline
+# Creating LLM for Retrieval-Augmented Generation (RAG) pipeline
 llm = AzureChatOpenAI(
     azure_endpoint=AZURE_OPENAI_ENDPOINT,
     api_key=AZURE_OPENAI_API_KEY,
@@ -54,7 +56,7 @@ llm = AzureChatOpenAI(
     temperature=1
 )
 
-
+# System prompt for fetching data from database
 system_prompt = (
     "Given a chat history and the latest user question "
     "answer only questions relevant to the information "
@@ -100,7 +102,7 @@ final_prompt = (
     "If the query is not relevant to IT or HR policies and cannot be answered from context or history, respond with:\n"
     "`Sorry, I am unable to answer this as it is beyond my scope.`\n\n"
     "Only mention source and other details if you are fetching relevant details.\n"
-    "If source is from HR then begin with `Database: HR`, if IT then begin with `Database: IT`.\n"
+    "If source is from HR then begin with `Database: HR\n`, if IT then begin with `Database: IT\n`.\n"
     "Use ONLY the retrieved context and chat history to answer.\n"
     "If mentioning policy, it has to be exact. When summarizing you can elaborate.\n"
     "For each answer, include the source filename, title, point number (if present) from the metadata.\n"
@@ -115,7 +117,6 @@ prompt_template = ChatPromptTemplate.from_messages(
         ("human", "{input}")
     ]
 )  
-
 
 question_answer_chain = create_stuff_documents_chain(llm, prompt_template)
 
@@ -140,6 +141,8 @@ if st.session_state.session_ended:
 
 
 # Display existing messages
+with st.chat_message("assistant"):
+    st.markdown("Hi I'm Nova AI Assistant. I'm here to answer your questions related to IT and HR.")
 for i in range(0, len(st.session_state.chat_history), 2):
     user_msg = st.session_state.chat_history[i].content
     ai_msg = st.session_state.chat_history[i + 1].content if i + 1 < len(st.session_state.chat_history) else ""
@@ -169,7 +172,7 @@ if user_input:
         "chat_history": st.session_state.chat_history
     })
 
-    # Step 4: Fallback to keyword search if retrieval is weak
+    # Fallback
     if not retrieved_docs or len(retrieved_docs) < 2:
         fallback_docs = retriever.similarity_search(user_input, k=4)
         question_answer_chain = create_stuff_documents_chain(llm, prompt_template)
@@ -177,12 +180,14 @@ if user_input:
     else:
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
+    # Exit Function
     if user_input.strip().lower() == "exit":
         st.session_state.session_ended = True
         with st.chat_message("assistant"):
             st.markdown("You've ended the sesssion. Please refresh the page to start a new one.")
         st.stop()
 
+    # RAG Chain implementation
     with st.chat_message("user"):
         st.markdown(user_input)
 
